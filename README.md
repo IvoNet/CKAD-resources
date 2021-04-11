@@ -116,13 +116,15 @@ topic.
 - [cncf - curriculum](https://github.com/cncf/curriculum)
 - [LF - Handbook](https://docs.linuxfoundation.org/tc-docs/certification/lf-candidate-handbook)
 
-## Exercises
+# Exercises
 
 below some exercises not in the exam style but to give you practice in speed and
 agility.
 
+## Exercise: Create a database setup with admin panel
+
 - give node worker1 the label `db=allow`
-- Create a persistent volume with access mode `ReadWriteOnce` in the home folder
+- Create a persistent volume with access mode `ReadWriteMany` in the home folder
   of your user called `mysql-data` with 200Mi space
 - In the `db` namespace do:
     - Create a volume claim for the same amount called `mysql-pvc` claiming
@@ -152,7 +154,7 @@ agility.
   and password `s3cr3t`
   ![](img/phpmyadmin.png)
 
-<details><summary>Solution (cli based)</summary>
+<details><summary>Solution - cli</summary>
 <p>
 
 ```shell
@@ -374,3 +376,144 @@ status:
 </details>
 
 
+<details><summary>Solution - mostly yaml</summary>
+<p>
+
+```shell
+# label node worker1
+kubectl label nodes worker1 db=allow
+
+# create namespace db
+kubectl create namespace db
+
+# create the needed folder on the needed worker (worker1)
+# I assume you are using my vagrant setup
+ssh 192.168.10.111  #worker1
+mkdir mysql-data
+exit
+
+
+```
+
+- mysql-setup.yml:
+
+```yaml
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    pv: mysql-pv
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 200Mi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/home/vagrant/mysql-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: db
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 200Mi
+  storageClassName: manual
+  selector:
+    matchLabels:
+      pv: mysql-pv
+---
+apiVersion: v1
+kind: Secret
+data:
+  MYSQL_ROOT_PASSWORD: czNjcjN0
+metadata:
+  name: db-secret
+  namespace: db
+type: Opaque
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: mysql
+  name: mysql
+  namespace: db
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: db
+            operator: In
+            values:
+            - allow
+  containers:
+  - name: mysql-pod
+    image: ivonet/mysql:5.7.29
+    ports:
+    - containerPort: 3306
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-secret
+          key: MYSQL_ROOT_PASSWORD
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: db-data
+      mountPath: /var/lib/mysql
+      subPath: dbdata
+    resources: {}
+  - name: phpmyadmin-pod
+    image: phpmyadmin
+    ports:
+    - containerPort: 80
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-secret
+          key: MYSQL_ROOT_PASSWORD
+    - name: PMA_HOST
+      value: mysql
+    - name: PMA_PORT
+      value: "3306"
+  restartPolicy: OnFailure
+  volumes:
+  - name: db-data
+    persistentVolumeClaim:
+      claimName: mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: mysql
+  name: mysql
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    nodePort: 32000
+  selector:
+    run: mysql
+  type: NodePort
+```
+
+```shell
+# Get it working
+kubectl apply -f mysql-setup.yml
+```
+
+</p>
+</details>
