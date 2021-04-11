@@ -119,7 +119,8 @@ topic.
 # Exercises
 
 below some exercises not in the exam style but to give you practice in speed and
-agility.
+agility. These are challenges I gave myself to practice.
+I tried to make them more challenging as I went along and to time myself.
 
 ## Exercise 01: Create a database setup with admin panel
 
