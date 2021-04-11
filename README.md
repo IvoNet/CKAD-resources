@@ -121,7 +121,7 @@ topic.
 below some exercises not in the exam style but to give you practice in speed and
 agility.
 
-## Exercise: Create a database setup with admin panel
+## Exercise 01: Create a database setup with admin panel
 
 - give node worker1 the label `db=allow`
 - Create a persistent volume with access mode `ReadWriteMany` in the home folder
@@ -357,6 +357,7 @@ metadata:
   labels:
     run: mysql
   name: mysql
+  namespace: db
 spec:
   ports:
   - port: 80
@@ -375,16 +376,12 @@ status:
 </p>
 </details>
 
-
 <details><summary>Solution - mostly yaml</summary>
 <p>
 
 ```shell
 # label node worker1
 kubectl label nodes worker1 db=allow
-
-# create namespace db
-kubectl create namespace db
 
 # create the needed folder on the needed worker (worker1)
 # I assume you are using my vagrant setup
@@ -398,6 +395,12 @@ exit
 - mysql-setup.yml:
 
 ```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: db
+  namespace: default
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -500,6 +503,7 @@ metadata:
   labels:
     run: mysql
   name: mysql
+  namespace: db
 spec:
   ports:
   - port: 80
@@ -512,8 +516,199 @@ spec:
 
 ```shell
 # Get it working
-kubectl apply -f mysql-setup.yml
+kubectl create -f mysql-setup.yml
+curl http://192.168.10.100:32000
+
 ```
+
+- try it in the browser and log in with the given creds...
 
 </p>
 </details>
+
+## Exercise 02: change 01 by:
+
+- changing the master node so that it also can schedule pods
+- extracting the multipod to two single pods
+- making sure the phpmyadmin will only be deployed on a node that has label 
+  `handles=stateless`  
+- label master to handle stateless applications
+- fix all errors
+- don't let the phpmyadmin become ready until mysql can be found on 3306
+
+<details><summary>Show</summary>
+<p>
+
+```shell
+#allow pods on master
+kubectl taint node master node-role.kubernetes.io/master-
+# label it
+kubectl label node master handles=stateless
+# Delete the old service
+kubectl -n db delete svc mysql
+# expose the mysql pod to the phpmyadmin pod
+kubectl expose pod mysql --port 3306 --name=mysql-service --namespace=db
+# change the old svc.yml
+```
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: phpmyadmin
+  name: phpmyadmin-service
+  namespace: db
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    nodePort: 32000
+  selector:
+    run: phpmyadmin
+  type: NodePort
+```
+
+```shell
+#create the service
+kubectl -n db create -f svc.yml
+# create a barebones pod def for phpmyadmin
+kubectl -n db run phpmyadmin --image=phpmyadmin --port=80 --dry-run=client -o yaml>php.yml
+# Now copy the container part for phpmyadin from from db.yml to php.yml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: phpmyadmin
+  name: phpmyadmin
+  namespace: db
+spec:
+  affinity: # only on nodes that handle stateless
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: handles
+            operator: In
+            values:
+            - stateless
+  containers: # replaced with data from the db.yml
+  - name: phpmyadmin-pod
+    image: phpmyadmin
+    ports:
+    - containerPort: 80
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-secret
+          key: MYSQL_ROOT_PASSWORD
+    - name: PMA_HOST
+      value: mysql-service # note this host needs to change to the mysql-service as it is not in the same pod anymore
+    - name: PMA_PORT
+      value: "3306"
+    imagePullPolicy: IfNotPresent
+  initContainers: # Used an initContainer for the readiness check as the nc command is not available in the phpmyadmin image
+  - name: init-mysql
+    image: busybox
+    command: ['sh', '-c', 'until nc -zvw3 mysql-service 3306; do echo waiting for mysql; sleep 2; done;']
+    imagePullPolicy: IfNotPresent
+  restartPolicy: OnFailure
+  volumes:
+  - name: db-data
+    persistentVolumeClaim:
+      claimName: mysql-pvc
+```
+
+Details initContainer command:
+
+- nc: It’s a command.
+- z: zero-I/O mode (used for scanning).
+- v: For verbose.
+- w3: timeout wait seconds
+- mysql-service: Destination system dns
+- 3306: Port number needs to be verified.
+
+```shell
+# first delete the old setup of the multipod
+kubectl -n db delete -f db.yml
+# now create the php
+kubectl -n db create -f php.yml
+#it should stay in the init state
+# see logs if the initContainer
+kubectl -n db logs phpmyadmin -c init-mysql
+waiting for mysql
+waiting for mysql
+waiting for mysql
+waiting for mysql
+```
+
+```shell
+# Remove the phpadminb part from db.yml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: mysql
+  name: mysql
+  namespace: db
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: db
+            operator: In
+            values:
+            - allow
+  containers:
+  - name: mysql-pod
+    image: ivonet/mysql:5.7.29
+    ports:
+    - containerPort: 3306
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-secret
+          key: MYSQL_ROOT_PASSWORD
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: db-data
+      mountPath: /var/lib/mysql
+      subPath: dbdata
+  restartPolicy: OnFailure
+  volumes:
+  - name: db-data
+    persistentVolumeClaim:
+      claimName: mysql-pvc
+```
+
+```shell
+kubectl -n db create -f db.yml
+kubectl -n db get po,svc -o wide
+# both containers should become READY
+NAME             READY   STATUS    RESTARTS   AGE     IP                NODE      NOMINATED NODE   READINESS GATES
+pod/mysql        1/1     Running   0          2m12s   192.168.235.129   worker1   <none>           <none>
+pod/phpmyadmin   1/1     Running   0          6m57s   192.168.219.76    master    <none>           <none>
+
+NAME                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+service/mysql-service        ClusterIP   10.97.164.232    <none>        3306/TCP       63m   run=mysql
+service/phpmyadmin-service   NodePort    10.102.219.202   <none>        80:32000/TCP   72m   run=phpmyadmin
+# phpmyadmin is running on master (handles=stateless label)
+# db is running on worker1 (db=allow label)
+#done
+```
+
+- check in browser: http://192.168.10.100:32000 USR:root PWD:s3cr3t
+
+</p>
+</details>
+
