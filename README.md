@@ -17,7 +17,7 @@ To prepare for the certification I followed two courses:
 
 - [LFD259 at the linux foundation](https://training.linuxfoundation.org/training/kubernetes-for-developers/)
   This course has the certification included (with re test if needed)
-- [Certified Kubernetes Administrator (CKA) with Practice Tests at Udemy](https://www.udemy.com/course/certified-kubernetes-administrator-with-practice-tests/)
+- [Kubernetes for Developers (LFD259) with practice tests at Udemy](https://www.udemy.com/course/certified-kubernetes-application-developer/)
   A very nice video based course with a kodekloud exercise place.
 
 ## Tips and tricks
