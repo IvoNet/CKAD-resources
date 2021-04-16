@@ -23,6 +23,10 @@ To prepare for the certification I followed two courses:
 ## Tips and tricks
 
 - Practice for speed! Speed is what you need...
+- Use commands as much as possible (dry-run) to save time.
+- basic stuff from memory like volume mounts (emptyDir / persistentVolumeClaim)
+- Apply the context command provided at every question!
+- Read carefully
 - To save time you can use variables and aliases to make commands easier and
   faster to type:
 
@@ -37,9 +41,10 @@ export DR='--dry-run=client -o yaml'
 alias k='kubectl -n $NS'
 # Now get code completion on the 'k' commands
 complete -F __start_kubectl k
-
 ```
 
+- These commands are also on the allowed [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/) 
+  if you want to cut and paste them.
 - if you want to do a dry-run you can now just add `$DR` to your command...
   saves a lot of typing.
 - I forgot the first command (`source <(kubectl completion bash)`) assuming it
@@ -93,6 +98,18 @@ echo 'set ts=2 sts=2 sw=2 et'>~/.vimrc
 #search for tabs and replace them with two spaces
 ```
 
+# Proctor stuff
+
+Stuff I had a bit of trouble with to show the proctor.
+
+- Showing my walls and stuff because my laptop has only short lines to monitors and power and 
+  streaming gets lost when decoupled... stressful.
+- I had an error on creating a service and that took too long to fix
+- not having code completion on tab broke my concentration
+    - this was because I had assumed `source <(kubectl completion bash)` had already been provided therefore I had no completion when gave the `complete -F __start_kubectl k` command. It gave an error
+    - every time I used `tab` to complete I received an error, and I had to type everything myself which I was not used to.
+    - easily fixed by going to the allowed [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/) but forgotten by me at the moment of exam.
+
 # Certification day preparation checklist
 
 - Passport / Second ID
@@ -120,7 +137,16 @@ For the certification you are allowed to have the kubernetes docs open in an
 extra tab in your browser. It is very advisable to create shortcuts for every
 topic.
 
-- [here](k8s_favorites.html) are the ones I used (you can possibly import them).
+- [here](k8s_favorites.html) are the ones I used.
+
+You can import them into the browser by:
+
+- `Opening Chrome` > `Bookmarks` > `Bookmarks Manager`
+- Click on the three dots in the upper right corner and choose `Import bookmarks`
+- navigate to the `k8s_favorites.html` from this project and import them
+- they will appear in the `Imported` folder of your bookmarks bar.
+- I sorted them on topic.
+- Reorganise as needed :-)
 
 ## Other resources
 
