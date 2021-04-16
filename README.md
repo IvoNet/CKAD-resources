@@ -26,23 +26,30 @@ To prepare for the certification I followed two courses:
   faster to type:
 
 ```shell
+# Create the kubectl autocomplete script
+source <(kubectl completion bash)
 #setting the namespace (just do this one again for another namespace if needed)
 export NS=default
 # You will do dry runs often and now you can just type $DR in stead of the whole thing
 export DR='--dry-run=client -o yaml'
 # use k to run the kubectl command in the exported namespace. Saves typing
 alias k='kubectl -n $NS'
-# if you know you are going to dry run...
-alias kdr='k $DR'
 # Now get code completion on both commands
-complete -F __start_kubectl k kdr
+complete -F __start_kubectl k
 
-# the above is the minimal setup. I prefer the following to
-
-alias ka='kubectl get all -A'
-alias kc='k create -f'
-alias kd='k delete -f'
 ```
+
+- if you want to do a dry-run you can now just add `$DR` to your command...
+  saves a lot of typing.
+- I forgot the first command (`source <(kubectl completion bash)`) assuming it
+  was already there and that hindered me quite a bit as I got error messages on
+  cli completion.
+    - the assumption stemmed from KodeKloud and KataCode where it was already
+      sourced in.
+    - Don't assume :-)
+- by just changing `DR=db` you are now running on that namespace
+    - Remember to change this back!!!
+    - Don't do this if you do not feel comfortable with it
 
 So...
 
@@ -50,15 +57,12 @@ So...
 <p>
 
 ```shell
-# if you forgot the kdr at the beginning just add the $DR
+# if you want a dry-run to get the yaml
 k run nginx --image=nginx --port 80 $DR >nginx.yml
 
-# or if you didn't forget
-kdr run nginx --image=nginx --port 80 >nginx.yml
-
 # doing commands on another namespace
-export NS=otherns
-#use 'k' 'kdr' as you would normally
+export NS=others
+#use 'k'  as you would normally
 #don't forget to go back to the default ns again or use the fully qualified
 #kubectl command if just for one command (default ns is default :-))
 export NS=default
@@ -71,12 +75,7 @@ export NS=default
   needed for yaml manipulation
 
 ```shell
-# edit the resource
-vi ~/.vimrc
-# remove everything in there
-2000dd
-# Add the following
-set ts=2 sts=2 sw=2 et
+echo 'set ts=2 sts=2 sw=2 et'>~/.vimrc
 # https://stackoverflow.com/questions/1878974/redefine-tab-as-4-spaces
 # tabstop=2
 # softtabstop=2
@@ -93,7 +92,28 @@ set ts=2 sts=2 sw=2 et
 #search for tabs and replace them with two spaces
 ```
 
-## kubernetes.io bookmarks
+# Certification day preparation checklist
+
+- Passport / Second ID
+- Go to the restroom
+- Clear browser history
+- Phone on do not disturb and put it away
+- Bottle of clear water (without label)
+- Cabled internet
+- Clean desktop of everything except keyboard and mouse
+- Close all applications except chrome
+    - Check in the task manager (cmd+option+esc on macOS)
+    - Don't forget applications like 'Alfred, docker, Dropbox, NordVPN' and
+      other background applications
+- Stop notifications on your computer
+- Charge your keyboard / mouse before the exam
+- Stop unwanted browser extensions for the duration of the exam
+- Make sure you can show all walls and your desktop with your webcam 
+  without having to decouple it.
+- Have the exam page ready
+    - have the pre-
+
+## kubernetes.io Bookmarks / Favorites
 
 For the certification you are allowed to have the kubernetes docs open in an
 extra tab in your browser. It is very advisable to create shortcuts for every
@@ -119,8 +139,8 @@ topic.
 # Exercises
 
 below some exercises not in the exam style but to give you practice in speed and
-agility. These are challenges I gave myself to practice.
-I tried to make them more challenging as I went along and to time myself.
+agility. These are challenges I gave myself to practice. I tried to make them
+more challenging as I went along and to time myself.
 
 ## Exercise 01: Create a database setup with admin panel
 
@@ -140,7 +160,7 @@ I tried to make them more challenging as I went along and to time myself.
             - mount the persistent volume claim called `mysql-pvc`
               on `/var/lib/mysql`
               and subPath `dbdata`
-            - this pod must only be deployed on a node with the label `db=allow`  
+            - this pod must only be deployed on a node with the label `db=allow`
         - phpmyadmin:
             - image: phpmyadmin
             - environment variables
@@ -150,8 +170,8 @@ I tried to make them more challenging as I went along and to time myself.
                   called `db-secret`>
                 - port: 80
         - expose the phpmyadmin port to outside the cluster on port 32000
-- Prove that it works by going to a browser tab an going to the 
-  http://\<your_cluster_ip here>:32000 and log in with the credentials `root` 
+- Prove that it works by going to a browser tab an going to the http:
+  //\<your_cluster_ip here>:32000 and log in with the credentials `root`
   and password `s3cr3t`
   ![](img/phpmyadmin.png)
 
@@ -159,17 +179,11 @@ I tried to make them more challenging as I went along and to time myself.
 <p>
 
 ```shell
-# first I performed these commands for speed
+source <(kubectl completion bash)
 export DR='--dry-run=client -o yaml'
 export NS=default
 alias k='kubectl -n $NS'
-alias kdr='k $DR'
-alias kc='k create -f'
-alias kd='k delete -f'
-alias kg='k get po,svc,pv,pvc,secret,deploy,netpol'
-alias ka='kubectl get all'
 complete -F __start_kubectl k
-complete -F __start_kubectl kdr
 
 # label node worker1
 k label nodes worker1 db=allow
@@ -180,7 +194,9 @@ mkdir mysql-data
 exit
 ```
 
-- Create [PersistentVolume](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/#create-a-persistentvolume) (copy example)
+-
+Create [PersistentVolume](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/#create-a-persistentvolume) (
+copy example)
 
 ```yaml
 apiVersion: v1
@@ -293,47 +309,47 @@ spec:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: db
-            operator: In
-            values:
-            - allow
+          - matchExpressions:
+              - key: db
+                operator: In
+                values:
+                  - allow
   containers:
-  - name: mysql-pod
-    image: ivonet/mysql:5.7.29
-    ports:
-    - containerPort: 3306
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom: # Change the 'value: todo' to these lines (https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables)
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    imagePullPolicy: IfNotPresent # I added this because I got blocked after pulling to much by docker
-    volumeMounts:
-    - name: db-data
-      mountPath: /var/lib/mysql
-      subPath: dbdata
-    resources: {}
-  - name: phpmyadmin-pod # add this whole part based on the former part with
-    image: phpmyadmin
-    ports:
-    - containerPort: 80
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    - name: PMA_HOST
-      value: mysql  # note that the host here must be the same as the .metadata.name
-    - name: PMA_PORT
-      value: "3306"
+    - name: mysql-pod
+      image: ivonet/mysql:5.7.29
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: # Change the 'value: todo' to these lines (https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables)
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+      imagePullPolicy: IfNotPresent # I added this because I got blocked after pulling to much by docker
+      volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/mysql
+          subPath: dbdata
+      resources: { }
+    - name: phpmyadmin-pod # add this whole part based on the former part with
+      image: phpmyadmin
+      ports:
+        - containerPort: 80
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: PMA_HOST
+          value: mysql  # note that the host here must be the same as the .metadata.name
+        - name: PMA_PORT
+          value: "3306"
   restartPolicy: OnFailure
   volumes: # assign the pvc
-  - name: db-data
-    persistentVolumeClaim:
-      claimName: mysql-pvc
+    - name: db-data
+      persistentVolumeClaim:
+        claimName: mysql-pvc
 ```
 
 ```shell
@@ -361,14 +377,14 @@ metadata:
   namespace: db
 spec:
   ports:
-  - port: 80
-    protocol: TCP
-    nodePort: 32000
+    - port: 80
+      protocol: TCP
+      nodePort: 32000
   selector:
     run: mysql
   type: NodePort
 status:
-  loadBalancer: {}
+  loadBalancer: { }
 ```
 
 - `curl -q http://192.168.10.100:32000` should give a html result.
@@ -456,47 +472,47 @@ spec:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: db
-            operator: In
-            values:
-            - allow
+          - matchExpressions:
+              - key: db
+                operator: In
+                values:
+                  - allow
   containers:
-  - name: mysql-pod
-    image: ivonet/mysql:5.7.29
-    ports:
-    - containerPort: 3306
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    imagePullPolicy: IfNotPresent
-    volumeMounts:
-    - name: db-data
-      mountPath: /var/lib/mysql
-      subPath: dbdata
-    resources: {}
-  - name: phpmyadmin-pod
-    image: phpmyadmin
-    ports:
-    - containerPort: 80
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    - name: PMA_HOST
-      value: mysql
-    - name: PMA_PORT
-      value: "3306"
+    - name: mysql-pod
+      image: ivonet/mysql:5.7.29
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/mysql
+          subPath: dbdata
+      resources: { }
+    - name: phpmyadmin-pod
+      image: phpmyadmin
+      ports:
+        - containerPort: 80
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: PMA_HOST
+          value: mysql
+        - name: PMA_PORT
+          value: "3306"
   restartPolicy: OnFailure
   volumes:
-  - name: db-data
-    persistentVolumeClaim:
-      claimName: mysql-pvc
+    - name: db-data
+      persistentVolumeClaim:
+        claimName: mysql-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -507,9 +523,9 @@ metadata:
   namespace: db
 spec:
   ports:
-  - port: 80
-    protocol: TCP
-    nodePort: 32000
+    - port: 80
+      protocol: TCP
+      nodePort: 32000
   selector:
     run: mysql
   type: NodePort
@@ -527,12 +543,12 @@ curl http://192.168.10.100:32000
 </p>
 </details>
 
-## Exercise 02: change 01 by:
+## Exercise 02: change 01 by...
 
 - changing the master node so that it also can schedule pods
 - extracting the multipod to two single pods
-- making sure the phpmyadmin will only be deployed on a node that has label 
-  `handles=stateless`  
+- making sure the phpmyadmin will only be deployed on a node that has label
+  `handles=stateless`
 - label master to handle stateless applications
 - fix all errors
 - don't let the phpmyadmin become ready until mysql can be found on 3306
@@ -562,9 +578,9 @@ metadata:
   namespace: db
 spec:
   ports:
-  - port: 80
-    protocol: TCP
-    nodePort: 32000
+    - port: 80
+      protocol: TCP
+      nodePort: 32000
   selector:
     run: phpmyadmin
   type: NodePort
@@ -591,37 +607,37 @@ spec:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: handles
-            operator: In
-            values:
-            - stateless
+          - matchExpressions:
+              - key: handles
+                operator: In
+                values:
+                  - stateless
   containers: # replaced with data from the db.yml
-  - name: phpmyadmin-pod
-    image: phpmyadmin
-    ports:
-    - containerPort: 80
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    - name: PMA_HOST
-      value: mysql-service # note this host needs to change to the mysql-service as it is not in the same pod anymore
-    - name: PMA_PORT
-      value: "3306"
-    imagePullPolicy: IfNotPresent
+    - name: phpmyadmin-pod
+      image: phpmyadmin
+      ports:
+        - containerPort: 80
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: PMA_HOST
+          value: mysql-service # note this host needs to change to the mysql-service as it is not in the same pod anymore
+        - name: PMA_PORT
+          value: "3306"
+      imagePullPolicy: IfNotPresent
   initContainers: # Used an initContainer for the readiness check as the nc command is not available in the phpmyadmin image
-  - name: init-mysql
-    image: busybox
-    command: ['sh', '-c', 'until nc -zvw3 mysql-service 3306; do echo waiting for mysql; sleep 2; done;']
-    imagePullPolicy: IfNotPresent
+    - name: init-mysql
+      image: busybox
+      command: [ 'sh', '-c', 'until nc -zvw3 mysql-service 3306; do echo waiting for mysql; sleep 2; done;' ]
+      imagePullPolicy: IfNotPresent
   restartPolicy: OnFailure
   volumes:
-  - name: db-data
-    persistentVolumeClaim:
-      claimName: mysql-pvc
+    - name: db-data
+      persistentVolumeClaim:
+        claimName: mysql-pvc
 ```
 
 Details initContainer command:
@@ -664,32 +680,32 @@ spec:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: db
-            operator: In
-            values:
-            - allow
+          - matchExpressions:
+              - key: db
+                operator: In
+                values:
+                  - allow
   containers:
-  - name: mysql-pod
-    image: ivonet/mysql:5.7.29
-    ports:
-    - containerPort: 3306
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secret
-          key: MYSQL_ROOT_PASSWORD
-    imagePullPolicy: IfNotPresent
-    volumeMounts:
-    - name: db-data
-      mountPath: /var/lib/mysql
-      subPath: dbdata
+    - name: mysql-pod
+      image: ivonet/mysql:5.7.29
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: MYSQL_ROOT_PASSWORD
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/mysql
+          subPath: dbdata
   restartPolicy: OnFailure
   volumes:
-  - name: db-data
-    persistentVolumeClaim:
-      claimName: mysql-pvc
+    - name: db-data
+      persistentVolumeClaim:
+        claimName: mysql-pvc
 ```
 
 ```shell
