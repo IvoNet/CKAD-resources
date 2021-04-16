@@ -22,11 +22,12 @@ To prepare for the certification I followed two courses:
 
 ## Tips and tricks
 
-- to save time you can use variables and aliases to make commands easier and
+- Practice for speed! Speed is what you need...
+- To save time you can use variables and aliases to make commands easier and
   faster to type:
 
 ```shell
-# Create the kubectl autocomplete script
+# Create and source the kubectl autocomplete script
 source <(kubectl completion bash)
 #setting the namespace (just do this one again for another namespace if needed)
 export NS=default
@@ -34,7 +35,7 @@ export NS=default
 export DR='--dry-run=client -o yaml'
 # use k to run the kubectl command in the exported namespace. Saves typing
 alias k='kubectl -n $NS'
-# Now get code completion on both commands
+# Now get code completion on the 'k' commands
 complete -F __start_kubectl k
 
 ```
@@ -49,7 +50,7 @@ complete -F __start_kubectl k
     - Don't assume :-)
 - by just changing `DR=db` you are now running on that namespace
     - Remember to change this back!!!
-    - Don't do this if you do not feel comfortable with it
+    - Don't do this if you do not feel comfortable with it... practice
 
 So...
 
@@ -99,19 +100,19 @@ echo 'set ts=2 sts=2 sw=2 et'>~/.vimrc
 - Clear browser history
 - Phone on do not disturb and put it away
 - Bottle of clear water (without label)
-- Cabled internet
+- Cabled internet or very reliable WiFi
 - Clean desktop of everything except keyboard and mouse
 - Close all applications except chrome
     - Check in the task manager (cmd+option+esc on macOS)
     - Don't forget applications like 'Alfred, docker, Dropbox, NordVPN' and
-      other background applications
-- Stop notifications on your computer
+      other background / Cloud applications
+- Stop notifications on your computer (Do Not Disturb)
 - Charge your keyboard / mouse before the exam
 - Stop unwanted browser extensions for the duration of the exam
 - Make sure you can show all walls and your desktop with your webcam 
-  without having to decouple it.
+  without having to decouple from internet.
 - Have the exam page ready
-    - have the pre-
+    - have the pre-checks been done?
 
 ## kubernetes.io Bookmarks / Favorites
 
@@ -119,7 +120,7 @@ For the certification you are allowed to have the kubernetes docs open in an
 extra tab in your browser. It is very advisable to create shortcuts for every
 topic.
 
-- [here](k8s_favorites.html) are the ones I used.
+- [here](k8s_favorites.html) are the ones I used (you can possibly import them).
 
 ## Other resources
 
